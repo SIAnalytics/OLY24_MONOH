@@ -5,6 +5,13 @@ import os.path as osp
 from PIL import Image
 from ..builder import PIPELINES
 
+import cv2
+import math
+import json
+import rasterio
+from rasterio.plot import show
+from rasterio.fill import fillnodata
+from rasterio.features import rasterize
 
 @PIPELINES.register_module()
 class LoadKITTICamIntrinsic(object):
@@ -238,3 +245,131 @@ class LoadImageFromFile(object):
         repr_str += f"color_type='{self.color_type}',"
         repr_str += f"imdecode_backend='{self.imdecode_backend}')"
         return repr_str
+
+@PIPELINES.register_module()
+class LoadSATIMGFromFile(object):
+    def __init__(self,
+                 to_float32 = True,
+                 color_type = 'color',
+                 file_client_args = dict(backend='disk'),
+                 imdecode_backend = 'rasterio'):
+        
+        self.to_float32 = to_float32
+        self.color_type = color_type
+        self.imdecode_backend = imdecode_backend
+
+    def channel_preprocess(self, channel):
+        CLAHE = cv2.createCLAHE(clipLimit=10.0, tileGridSize=(8,8))
+        
+        channel_min = np.min(channel)
+        channel_max = np.max(channel)
+        
+        channel = (channel-channel_min) / (channel_max-channel_min)
+        channel *= 255
+        channel = CLAHE.apply(channel.astype(np.uint8))
+
+        return channel
+
+    def __call__(self, results):
+        filename = results['img_info']['filename']
+        
+        img = rasterio.open(filename)
+        img = img.read()
+
+        # shape of img : 3xHxW
+        img = np.transpose(img, (1,2,0)).astype(np.float16)
+        img = img[:,:,[4,2,1]]
+
+        r_c = self.channel_preprocess(img[:,:,0])
+        g_c = self.channel_preprocess(img[:,:,1])
+        b_c = self.channel_preprocess(img[:,:,2])
+
+        img = np.stack((r_c, g_c, b_c), axis=2).astype(np.float16)
+
+        # shape of img : HxWx3
+        results['filename']     = filename
+        results['ori_filename'] = filename.split('/')[-1]
+        results['img']          = img
+        results['img_shape']    = img.shape
+        results['ori_shape']    = img.shape
+        results['pad_shape']    = img.shape
+        results['scale_factor'] = 1.0
+        num_channels = 1 if len(img.shape) < 3 else img.shape[2]
+        results['img_norm_cfg'] = dict(mean     = np.zeros(num_channels, dtype = np.float16),
+                                       std      = np.ones(num_channels, dtype = np.float16),
+                                       to_rgb   = False)
+        return results
+
+    def __repr__(self):
+        repr_str = self.__class__.__name__
+        repr_str += f'(to_float32={self.to_float32},'
+        repr_str += f"color_type='{self.color_type}',"
+        repr_str += f"imdecode_backend='{self.imdecode_backend}')"
+        return repr_str
+
+@PIPELINES.register_module()
+class LoadANDProcessNDSM(object):
+    def __init__(self,
+                 file_client_args=dict(backend='disk'),
+                 imdecode_backend='rasterio'):
+        self.imdecode_backend = imdecode_backend
+
+    def __call__(self, results):
+        rgb = rasterio.open(results['img_info']['filename'])
+        dsm = rasterio.open(results['ann_info']['dsm'])
+        dtm = rasterio.open(results['ann_info']['dtm'])
+
+        nodata_m = dtm.read_masks(1)
+        nodata_m = nodata_m.astype(np.bool_)
+
+        rgb = rgb.read()
+        dtm = dtm.read()
+        
+        rgb = np.sum(rgb, axis=0)
+        eo_nomask = np.ones(rgb.shape)
+        eo_nomask[rgb<=0] = False
+        eo_nomask = eo_nomask.astype(np.bool_)
+
+        nodata_m = np.logical_and(nodata_m, eo_nomask)
+
+        dsm_mask = dsm.read_masks(1)
+        dsm = dsm.read()
+        if len(dsm.shape) == 3:
+            dsm = dsm[0,:,:]
+            dsm_mask = np.ones(dsm_mask.shape)
+            dsm_mask[dsm <= 0] = False
+            dsm_mask = dsm_mask.astype(np.bool_)
+        else:
+            pass
+
+        nodata_m = np.logical_and(nodata_m, dsm_mask)
+        
+        dsm[dsm<0] = 0
+        dtm[dtm<0] = 0
+
+        ndsm = dsm-dtm
+
+        results['depth_gt']             = ndsm
+        results['depth_ori_shape']      = ndsm.shape
+        results['val_mask']             = nodata_m
+        results['depth_fields'].append('depth_gt')
+
+        with open(results['ann_info']['meta']) as m:
+            meta = json.load(m)
+        m.close()
+
+        az_angle = meta['NITF_CSEXRA_AZ_OF_OBLIQUITY']
+        delta_x  = math.cos(math.radians(90 + az_angle))
+        delta_y  = math.sin(math.radians(90 - az_angle))
+        ps_angle = math.degrees(math.atan(delta_y / delta_x))
+
+        results['pose_angle'] = ps_angle
+        results['delta_xy'] = [delta_y, delta_x]
+
+        return results
+
+    def __repr__(self):
+        repr_str = self.__class__.__name__
+        repr_str = f"imdecode_backend='{self.imdecode_backend}')"
+        return repr_str
+

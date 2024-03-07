@@ -6,7 +6,8 @@ from .custom import CustomDepthDataset
 from .cityscapes import CSDataset
 from .builder import DATASETS, PIPELINES, build_dataloader, build_dataset
 from .nyu_binsformer import NYUBinFormerDataset
+from .ndsm import nDSMTileDataset
 
 __all__ = [
-    'KITTIDataset', 'NYUDataset', 'SUNRGBDDataset', 'CustomDepthDataset', 'CSDataset', 'NYUBinFormerDataset'
+    'KITTIDataset', 'NYUDataset', 'SUNRGBDDataset', 'CustomDepthDataset', 'CSDataset', 'NYUBinFormerDataset', 'nDSMTileDataset'
 ]

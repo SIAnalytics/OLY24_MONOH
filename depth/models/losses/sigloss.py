@@ -47,12 +47,19 @@ class SigLoss(nn.Module):
         if self.warm_up:
             if self.warm_up_counter < self.warm_iter:
                 g = torch.log(input + self.eps) - torch.log(target + self.eps)
+                print('loss warmup step1 | g : ', g)
                 g = 0.15 * torch.pow(torch.mean(g), 2)
+                print('loss warmup step2 | g : ', g)
                 self.warm_up_counter += 1
-                return torch.sqrt(g)
+                g = torch.sqrt(g)
+                print('loss warmup step3 | g : ', g)
+                return g
 
         g = torch.log(input + self.eps) - torch.log(target + self.eps)
+        print('loss main step1 | g : ', g)
         Dg = torch.var(g) + 0.15 * torch.pow(torch.mean(g), 2)
+        print('loss main step2 | var of g-{}/ mean of g-{}/ pow of mean-{}'.format(torch.var(g), torch.mean(g), torch.pow(torch.mean(g), 2)))
+        print('loss main step3 | Dg : ', Dg)
         return torch.sqrt(Dg)
 
     def forward(self, depth_pred, depth_gt):

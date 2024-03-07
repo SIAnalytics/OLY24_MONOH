@@ -4,7 +4,7 @@ from .formating import (Collect, ImageToTensor, ToDataContainer, ToTensor,
                         Transpose, to_tensor)
 from .test_time_aug import MultiScaleFlipAug
 
-from .loading import DepthLoadAnnotations, DisparityLoadAnnotations, LoadImageFromFile, LoadKITTICamIntrinsic
+from .loading import DepthLoadAnnotations, DisparityLoadAnnotations, LoadImageFromFile, LoadKITTICamIntrinsic, LoadSATIMGFromFile, LoadANDProcessNDSM
 from .transforms import KBCrop, RandomRotate, RandomFlip, RandomCrop, NYUCrop, Resize, Normalize
 from .formating import DefaultFormatBundle
 
@@ -13,5 +13,5 @@ __all__ = [
     'Transpose', 'to_tensor', 'MultiScaleFlipAug',
 
     'DepthLoadAnnotations', 'KBCrop', 'RandomRotate', 'RandomFlip', 'RandomCrop', 'DefaultFormatBundle',
-    'NYUCrop', 'DisparityLoadAnnotations', 'Resize', 'LoadImageFromFile', 'Normalize', 'LoadKITTICamIntrinsic'
+    'NYUCrop', 'DisparityLoadAnnotations', 'Resize', 'LoadImageFromFile', 'Normalize', 'LoadKITTICamIntrinsic', 'LoadSATIMGFromFile', 'LoadANDProcessNDSM'
 ]

@@ -141,7 +141,9 @@ class DepthEncoderDecoder(BaseDepther):
         Returns:
             Tensor: The output depth map.
         """
-
+        #### Modified by yongjinjeon
+        #### 2024.03.04
+        print('img meta : ', img_meta)
         assert self.test_cfg.mode in ['slide', 'whole']
         ori_shape = img_meta[0]['ori_shape']
         assert all(_['ori_shape'] == ori_shape for _ in img_meta)
@@ -150,6 +152,10 @@ class DepthEncoderDecoder(BaseDepther):
         else:
             depth_pred = self.whole_inference(img, img_meta, rescale)
         output = depth_pred
+        
+        #### Modified by yongjinjeon
+        #### 2024.03.04
+        '''
         flip = img_meta[0]['flip']
         if flip:
             flip_direction = img_meta[0]['flip_direction']
@@ -158,7 +164,7 @@ class DepthEncoderDecoder(BaseDepther):
                 output = output.flip(dims=(3, ))
             elif flip_direction == 'vertical':
                 output = output.flip(dims=(2, ))
-
+        '''
         return output
 
     def simple_test(self, img, img_meta, rescale=True):

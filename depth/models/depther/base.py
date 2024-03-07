@@ -72,9 +72,12 @@ class BaseDepther(BaseModule, metaclass=ABCMeta):
                 images in a batch.
         """
         for var, name in [(imgs, 'imgs'), (img_metas, 'img_metas')]:
+            var = list(var)
+            name = list(name)
             if not isinstance(var, list):
                 raise TypeError(f'{name} must be a list, but got '
                                 f'{type(var)}')
+            pass
         num_augs = len(imgs)
         if num_augs != len(img_metas):
             raise ValueError(f'num of augmentations ({len(imgs)}) != '
@@ -82,6 +85,9 @@ class BaseDepther(BaseModule, metaclass=ABCMeta):
         # all images in the same aug batch all of the same ori_shape and pad
         # shape
         for img_meta in img_metas:
+            #### Modified by yongjinjeon
+            #### 2024.03.05
+            img_meta = [img_meta]
             ori_shapes = [_['ori_shape'] for _ in img_meta]
             assert all(shape == ori_shapes[0] for shape in ori_shapes)
             img_shapes = [_['img_shape'] for _ in img_meta]
@@ -90,9 +96,15 @@ class BaseDepther(BaseModule, metaclass=ABCMeta):
             assert all(shape == pad_shapes[0] for shape in pad_shapes)
 
         if num_augs == 1:
-            return self.simple_test(imgs[0], img_metas[0], **kwargs)
+            #### Modified by yongjinjeon
+            #### 2024.03.04
+            #return self.simple_test(imgs[0], img_metas[0], **kwargs)
+            return self.simple_test(imgs, img_metas)
         else:
-            return self.aug_test(imgs, img_metas, **kwargs)
+            #### Modified by yongjinjeon
+            #### 2024.03.04
+            #return self.aug_test(imgs, img_metas, **kwargs)
+            return self.aug_test(imgs, img_metas)
 
     @auto_fp16(apply_to=('img', ))
     def forward(self, img, img_metas, return_loss=True, **kwargs):

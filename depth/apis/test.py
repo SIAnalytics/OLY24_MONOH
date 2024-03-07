@@ -103,8 +103,12 @@ def single_gpu_test(model,
         results.extend(result)
 
         if show or out_dir:
-            img_tensor = data['img'][0]
-            img_metas = data['img_metas'][0].data[0]
+            #img_tensor = data['img'][0]
+            #img_metas = data['img_metas'][0].data[0]
+            #### Modified by yongjinjeon
+            #### 2024.03.04
+            img_tensor = data['img']
+            img_metas = data['img_metas'].data[0]
             imgs = tensor2imgs(img_tensor, **img_metas[0]['img_norm_cfg'])
             assert len(imgs) == len(img_metas)
 
